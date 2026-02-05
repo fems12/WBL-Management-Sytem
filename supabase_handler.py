@@ -6,8 +6,22 @@ except ImportError:
 
 def get_supabase_client():
     try:
-        url = st.secrets["supabase"]["url"]
-        key = st.secrets["supabase"]["key"]
+        # Try nested [supabase] section first (Standard)
+        if "supabase" in st.secrets:
+            url = st.secrets["supabase"]["url"]
+            key = st.secrets["supabase"]["key"]
+        # Fallback: Try flat keys (Common mistake fix)
+        elif "supabase_url" in st.secrets and "supabase_key" in st.secrets:
+            url = st.secrets["supabase_url"]
+            key = st.secrets["supabase_key"]
+        # Fallback: Try just 'url' and 'key' if user pasted JUST the contents
+        elif "url" in st.secrets and "key" in st.secrets:
+            url = st.secrets["url"]
+            key = st.secrets["key"]
+        else:
+            st.error("❌ Missing Secrets! Please add [supabase] section with url and key.")
+            return None
+            
         return create_client(url, key)
     except Exception as e:
         st.error(f"Supabase Init Error: {e}")
