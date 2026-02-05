@@ -176,13 +176,15 @@ def show_staff_marking_portal():
 
     # User Profile / Logout / Change Pwd Header
     # User Profile / Logout / Change Pwd Header
-    c_info, c_logout = st.columns([3, 1])
-    with c_info:
-        st.success(f"👤 Logged in as: {st.session_state['staff_name']}")
-    with c_logout:
-        if st.button("🚪 Logout", key="staff_logout_main", type="primary", use_container_width=True):
-             st.session_state["staff_id_num"] = None
-             st.rerun()
+    # User Profile Info
+    st.success(f"👤 Logged in as: {st.session_state['staff_name']}")
+
+    # Sidebar Logout
+    st.sidebar.markdown("---")
+    st.sidebar.info(f"👨‍🏫 {st.session_state['staff_name']}")
+    if st.sidebar.button("🚪 Logout Staff", key="staff_logout_sidebar"):
+         st.session_state["staff_id_num"] = None
+         st.rerun()
 
     with st.expander("🔐 Change Password", expanded=False):
         new_p = st.text_input("New Password", type="password")
