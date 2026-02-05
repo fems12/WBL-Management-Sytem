@@ -18,6 +18,11 @@ def get_supabase_client():
         elif "url" in st.secrets and "key" in st.secrets:
             url = st.secrets["url"]
             key = st.secrets["key"]
+        # Consolidate and Sanitize
+        if url and key:
+             # AUTO-FIX: Remove hidden spaces and newlines!
+             url = url.strip().replace("\n", "").replace("\r", "")
+             key = key.strip().replace("\n", "").replace("\r", "")
         else:
             st.error("❌ Missing Secrets! Please add [supabase] section with url and key.")
             return None
