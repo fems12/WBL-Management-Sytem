@@ -175,20 +175,23 @@ def show_staff_marking_portal():
         return
 
     # User Profile / Logout / Change Pwd Header
-    with st.expander(f"👤 Logged in as: {st.session_state['staff_name']}", expanded=False):
-        cp1, cp2 = st.columns(2)
-        with cp1:
-            new_p = st.text_input("New Password", type="password")
-            if st.button("Change Password"):
-                if new_p:
-                    s, m = db.update_staff_password(st.session_state["staff_id_num"], new_p)
-                    if s: st.success(m)
-                    else: st.error(m)
-        with cp2:
-            if st.button("🚪 Logout Staff", use_container_width=True):
-                st.session_state["staff_id_num"] = None
-                st.rerun()
-        st.markdown("---")
+    # User Profile / Logout / Change Pwd Header
+    c_info, c_logout = st.columns([3, 1])
+    with c_info:
+        st.success(f"👤 Logged in as: {st.session_state['staff_name']}")
+    with c_logout:
+        if st.button("🚪 Logout", key="staff_logout_main", type="primary", use_container_width=True):
+             st.session_state["staff_id_num"] = None
+             st.rerun()
+
+    with st.expander("🔐 Change Password", expanded=False):
+        new_p = st.text_input("New Password", type="password")
+        if st.button("Update Password"):
+            if new_p:
+                s, m = db.update_staff_password(st.session_state["staff_id_num"], new_p)
+                if s: st.success(m)
+                else: st.error(m)
+    st.markdown("---")
 
     # Marking Section
     st.subheader("Your Students")
