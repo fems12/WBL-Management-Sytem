@@ -16,6 +16,13 @@ def init_db():
 
 def get_students(include_archived=False):
     """Fetch students from Supabase."""
+    global sb
+    if sb is None:
+        sb = get_supabase_client()
+        if sb is None:
+             st.error("🚨 Critical Error: Database connection failed. Please check Secrets.")
+             return pd.DataFrame()
+
     try:
         # Fetch ALL data first to handle None/Null values safely in Python
         query = sb.table("students").select("*")
