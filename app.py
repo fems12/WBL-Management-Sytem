@@ -456,12 +456,14 @@ def show_staff_marking_portal():
                     # Distribute across columns
                     c = cols[idx % 2]
                     with c:
-                        val = st.number_input(
+                        # Generate integer options for the scale
+                        max_val = int(item['max'])
+                        options = list(range(max_val + 1))
+                        
+                        val = st.radio(
                             f"{item['label']} (Max: {item['max']})",
-                            min_value=0.0, 
-                            max_value=float(item['max']),
-                            value=0.0,
-                            step=0.5,
+                            options=options,
+                            horizontal=True,
                             help=item.get("desc", ""),
                             key=f"rub_{sel_matrix}_{idx}"
                         )
