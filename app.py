@@ -6,6 +6,7 @@ import smtplib
 import base64
 import requests
 import supabase_handler as sb
+import rubric_config as rc
 from email.mime.text import MIMEText
 
 def send_recovery_email(to_email, password):
@@ -405,6 +406,119 @@ def show_staff_marking_portal():
             st.success(f"Updated marks for {success_count} students!")
         if errors:
             for e in errors: st.error(e)
+
+    # --- DETAILED RUBRIC GRADING SECTION ---
+    st.divider()
+    st.subheader("🧮 Detailed Rubric Grading")
+    
+    # 1. Select Student
+    # Create a nice label with Name + Matrix
+    student_opts = filtered_df.apply(lambda x: f"{x['Student_Name']} ({x['Matrix_No']})", axis=1).tolist()
+    
+    if not student_opts:
+        st.info("No students available in current filter to grade.")
+    else:
+        c_sel1, c_sel2 = st.columns([2, 1])
+        with c_sel1:
+            selected_label = st.selectbox("Select Student to Grade", student_opts, key="rubric_student_sel")
+        
+        # Parse connection to get Matrix
+        # Assumes format "Name (Matrix)"
+        sel_matrix = selected_label.split("(")[-1].replace(")", "")
+        sel_row = filtered_df[filtered_df['Matrix_No'] == sel_matrix].iloc[0]
+        
+        with c_sel2:
+            # Determine applicable subjects
+            # We can let staff choose, or infer. Let's let them choose relevant ones.
+            # Only show subjects that match the current main Filter if possible, otherwise all.
+            avail_subs = ["FYP 1", "FYP 2", "LI"]
+            target_subject = st.selectbox("Select Subject", avail_subs, key="rubric_sub_sel")
+            
+        # 2. Display Rubric Form
+        if target_subject in rc.RUBRIC_TEMPLATES:
+            template = rc.RUBRIC_TEMPLATES[target_subject]
+            items = template["items"]
+            
+            st.markdown(f"**Grading: {sel_row['Student_Name']} - {target_subject}**")
+            
+            # Using a Form to prevent constantly rerun
+            with st.form(key=f"rubric_form_{sel_matrix}"):
+                scores = {}
+                total_score = 0
+                max_total = 0
+                
+                # Fetch current total mark to possibly pre-fill?
+                # It's hard to pre-fill detailed items if we didn't save them.
+                # So we start fresh or 0.
+                
+                cols = st.columns(2)
+                for idx, item in enumerate(items):
+                    # Distribute across columns
+                    c = cols[idx % 2]
+                    with c:
+                        val = st.number_input(
+                            f"{item['label']} (Max: {item['max']})",
+                            min_value=0.0, 
+                            max_value=float(item['max']),
+                            value=0.0,
+                            step=0.5,
+                            help=item.get("desc", ""),
+                            key=f"rub_{sel_matrix}_{idx}"
+                        )
+                        scores[item['label']] = val
+                        total_score += val
+                        max_total += item['max']
+                        
+                st.markdown("---")
+                c_res1, c_res2 = st.columns([1, 1])
+                with c_res1:
+                    st.metric("Total Score", f"{total_score} / {max_total}")
+                    
+                with c_res2:
+                    st.write("Confirming will update the student's mark in the database.")
+                    submitted = st.form_submit_button("💾 Save Grade", type="primary")
+                    
+                    if submitted:
+                        # Save Logic
+                        # We map subject to DB column
+                        f1, f2, li = None, None, None
+                        
+                        # Preserve existing marks! (We don't want to overwrite other subjects with None)
+                        # db.update_student_marks usually expects all 3.
+                        # We use the row data we just fetched.
+                        
+                        cur_f1 = sel_row['FYP 1 Marks']
+                        cur_f2 = sel_row['FYP 2 Marks']
+                        cur_li = sel_row['LI Marks']
+                        
+                        # Update the specific one
+                        if target_subject == "FYP 1":
+                            f1 = total_score
+                            f2 = cur_f2
+                            li = cur_li
+                        elif target_subject == "FYP 2":
+                            f1 = cur_f1
+                            f2 = total_score
+                            li = cur_li
+                        elif target_subject == "LI":
+                            f1 = cur_f1
+                            f2 = cur_f2
+                            li = total_score
+                            
+                        # Call DB
+                        success, msg = db.update_student_marks(
+                            sel_matrix, 
+                            f1 if pd.notna(f1) else 0.0, 
+                            f2 if pd.notna(f2) else 0.0, 
+                            li if pd.notna(li) else 0.0,
+                            changed_by=st.session_state.get("staff_name", "Staff")
+                        )
+                        
+                        if success:
+                            st.success(f"✅ Grade saved: {total_score}")
+                            st.rerun()
+                        else:
+                            st.error(f"❌ Error: {msg}")
 
 def show_admin_login():
     st.header("🔐 Admin Login")

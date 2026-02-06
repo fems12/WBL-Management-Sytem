@@ -375,6 +375,24 @@ def update_student_field(matrix, field, value, changed_by="Admin"):
     except Exception as e:
         return False, str(e)
 
+def update_student_marks(matrix, fyp1, fyp2, li, changed_by="Staff"):
+    """
+    Updates all 3 mark fields at once.
+    """
+    try:
+        data = {
+            "fyp1_marks": float(fyp1) if fyp1 is not None else None,
+            "fyp2_marks": float(fyp2) if fyp2 is not None else None,
+            "li_marks": float(li) if li is not None else None
+        }
+        sb.table("students").update(data).eq("matrix_number", matrix).execute()
+        
+        # Log it (just summary)
+        log_audit(matrix, "Marks Update", "Detailed", f"{fyp1}|{fyp2}|{li}", changed_by)
+        return True, "Marks updated successfully."
+    except Exception as e:
+        return False, str(e)
+
 def sync_student_data(matrix):
     """
     Syncs FYP 1 data to FYP 2 (Company, Title) and LI columns.
