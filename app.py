@@ -456,19 +456,30 @@ def show_staff_marking_portal():
                     # Distribute across columns
                     c = cols[idx % 2]
                     with c:
-                        # Generate integer options for the scale
-                        max_val = int(item['max'])
-                        options = list(range(max_val + 1))
+                        # Display Label & Description
+                        st.markdown(f"**{item['label']}**")
+                        if item.get("desc"):
+                            st.caption(item["desc"])
+
+                        # Fixed Scale 0-5 as requested
+                        scale_max = 5
+                        options = list(range(scale_max + 1))
                         
-                        val = st.radio(
-                            f"{item['label']} (Max: {item['max']})",
+                        rating = st.radio(
+                            f"Rate {item['label']}",
                             options=options,
                             horizontal=True,
-                            help=item.get("desc", ""),
+                            label_visibility="collapsed",
                             key=f"rub_{sel_matrix}_{idx}"
                         )
-                        scores[item['label']] = val
-                        total_score += val
+                        
+                        # Calculate weighted marks
+                        # Rating 5 = 100% of Max Marks
+                        cur_score = (rating / scale_max) * float(item['max'])
+                        st.caption(f"Calculated Score: **{cur_score:.2f}** / {item['max']}")
+                        
+                        scores[item['label']] = cur_score
+                        total_score += cur_score
                         max_total += item['max']
                         
                 st.markdown("---")
