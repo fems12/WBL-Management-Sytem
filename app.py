@@ -213,61 +213,7 @@ def show_staff_marking_portal():
         return
 
     # --- RUBRICS SECTION ---
-    with st.expander("📂 Reference Rubrics & Documents (Click to Expand)", expanded=False):
-         relevant_cohorts = df['Cohort'].unique().tolist()
-         staff_id = st.session_state["staff_db_id"]
-         
-         # Check relevant subjects for this staff
-         has_fyp1 = ((df['fyp1_sv_id'] == staff_id) | (df['fyp1_panel_id'] == staff_id)).any()
-         has_fyp2 = ((df['fyp2_sv_id'] == staff_id) | (df['fyp2_panel_id'] == staff_id)).any()
-         has_li = ((df['li_industry_sv_id'] == staff_id) | (df['li_uni_sv_id'] == staff_id)).any()
-         
-         rubrics_df = db.get_rubrics()
-         
-         if not rubrics_df.empty:
-             mask = pd.Series([False] * len(rubrics_df))
-             if has_fyp1: mask |= ((rubrics_df['subject'] == "FYP 1") & (rubrics_df['cohort'].isin(relevant_cohorts)))
-             if has_fyp2: mask |= ((rubrics_df['subject'] == "FYP 2") & (rubrics_df['cohort'].isin(relevant_cohorts)))
-             if has_li: mask |= ((rubrics_df['subject'] == "LI") & (rubrics_df['cohort'].isin(relevant_cohorts)))
-             
-             visible_rubrics = rubrics_df[mask]
-             
-             if not visible_rubrics.empty:
-                 cols = st.columns(3)
-                 for i, sub in enumerate(["FYP 1", "FYP 2", "LI"]):
-                     with cols[i]:
-                         sub_rubs = visible_rubrics[visible_rubrics['subject'] == sub]
-                         if not sub_rubs.empty:
-                             st.markdown(f"**{sub}**")
-                             for _, r in sub_rubs.iterrows():
-                                 fname = r['filename']
-                                 iname = r['item_name']
-                                 coh = r['cohort']
-                                 import os
-                                 fpath = os.path.join("uploads", "rubrics", fname)
-                                
-                                 # Use Cloud Storage Link
-                                 url = sb.get_signed_url("rubrics", fname)
-                                 if not url:
-                                      # Fallback to Public
-                                      url = sb.get_public_url("rubrics", fname)
-                                      
-                                 if url:
-                                     st.link_button(f"📥 {iname} (Open/Download)", url)
-                                     st.caption(f"Cohort: {coh}")
-                                 elif os.path.exists(fpath):
-                                     # Fallback to Local if exists (Dev mode)
-                                      with open(fpath, "rb") as f:
-                                         st.download_button(f"📥 {iname}", f, file_name=fname, key=f"rub_{r['rubric_id']}")
-                                         st.caption(f"Cohort: {coh}")
-                                 else:
-                                     st.error(f"File not found: {fname}")
-             else:
-                 st.info("No rubrics found for your assigned subjects/cohorts.")
-         else:
-             st.info("No rubrics available.")
-    
-    st.markdown("---")
+
 
     # Filters for Staff Portal
     c1, c2, c3, c4, c5 = st.columns(5)
