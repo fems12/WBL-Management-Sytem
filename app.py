@@ -6,7 +6,7 @@ import smtplib
 import base64
 import requests
 import supabase_handler as sb
-import rubric_config as rc
+
 from email.mime.text import MIMEText
 
 def send_recovery_email(to_email, password):
@@ -407,138 +407,7 @@ def show_staff_marking_portal():
         if errors:
             for e in errors: st.error(e)
 
-    # --- DETAILED RUBRIC GRADING SECTION ---
-    st.divider()
-    st.subheader("🧮 Detailed Rubric Grading")
-    
-    # 1. Select Student
-    # Create a nice label with Name + Matrix
-    student_opts = filtered_df.apply(lambda x: f"{x['Student_Name']} ({x['Matrix_No']})", axis=1).tolist()
-    
-    if not student_opts:
-        st.info("No students available in current filter to grade.")
-    else:
-        c_sel1, c_sel2 = st.columns([2, 1])
-        with c_sel1:
-            selected_label = st.selectbox("Select Student to Grade", student_opts, key="rubric_student_sel")
-        
-        # Parse connection to get Matrix
-        # Assumes format "Name (Matrix)"
-        sel_matrix = selected_label.split("(")[-1].replace(")", "")
-        sel_row = filtered_df[filtered_df['Matrix_No'] == sel_matrix].iloc[0]
-        
-        with c_sel2:
-            # Determine applicable subjects
-            # We can let staff choose, or infer. Let's let them choose relevant ones.
-            # Only show subjects that match the current main Filter if possible, otherwise all.
-            avail_subs = ["FYP 1", "FYP 2", "LI"]
-            target_subject = st.selectbox("Select Subject", avail_subs, key="rubric_sub_sel")
-            
-        # 2. Display Rubric Form
-        if target_subject in rc.RUBRIC_TEMPLATES:
-            subject_data = rc.RUBRIC_TEMPLATES[target_subject]
-            
-            # Normalize structure: If it has 'forms', use that. If just 'items' (legacy), wrap it.
-            if "forms" in subject_data:
-                forms_list = subject_data["forms"]
-            else:
-                forms_list = [{"name": "General Evaluation", "items": subject_data.get("items", [])}]
-            
-            st.markdown(f"### 📑 Grading: {sel_row['Student_Name']} - {target_subject}")
-            
-            # Master Form for all sub-forms
-            with st.form(key=f"rubric_master_{sel_matrix}"):
-                grand_total_score = 0
-                grand_total_max = 0
-                scores = {}
-                
-                # Loop through each "Form" (Section)
-                for form_idx, form in enumerate(forms_list):
-                    st.markdown(f"#### {form['name']}")
-                    st.info(f"Please rate the following items for {form['name']}")
-                    
-                    items = form["items"]
-                    # Use a container or columns for items
-                    cols = st.columns(2)
-                    
-                    for idx, item in enumerate(items):
-                         # Distribute across columns
-                        c = cols[idx % 2]
-                        with c:
-                            # Display Label & Description
-                            st.markdown(f"**{item['label']}**")
-                            if item.get("desc"):
-                                st.caption(item["desc"])
 
-                            # Fixed Scale 0-5
-                            scale_max = 5
-                            options = list(range(scale_max + 1))
-                            
-                            # Unique key needs form index too
-                            rating = st.radio(
-                                f"Rate {item['label']}",
-                                options=options,
-                                horizontal=True,
-                                label_visibility="collapsed",
-                                key=f"rub_{sel_matrix}_{form_idx}_{idx}"
-                            )
-                            
-                            # Calculate weighted marks
-                            cur_score = (rating / scale_max) * float(item['max'])
-                            st.caption(f"Score: **{cur_score:.1f}** / {item['max']}")
-                            
-                            scores[f"{form['name']} - {item['label']}"] = cur_score
-                            grand_total_score += cur_score
-                            grand_total_max += item['max']
-                    
-                    st.divider()
-
-                # Footer Actions
-                c_res1, c_res2 = st.columns([1, 1])
-                with c_res1:
-                    st.markdown(f"### Grand Total: {grand_total_score:.2f} / {grand_total_max}")
-                    
-                with c_res2:
-                    st.write("Confirming will update the student's final mark in the database.")
-                    submitted = st.form_submit_button("💾 Save All Grades", type="primary")
-                    
-                    if submitted:
-                        # Save Logic uses grand_total_score as the final subject mark
-                        # We map subject to DB column
-                        f1, f2, li = None, None, None
-                        
-                        cur_f1 = sel_row['FYP 1 Marks']
-                        cur_f2 = sel_row['FYP 2 Marks']
-                        cur_li = sel_row['LI Marks']
-                        
-                        # Update the specific one
-                        if target_subject == "FYP 1":
-                            f1 = grand_total_score
-                            f2 = cur_f2
-                            li = cur_li
-                        elif target_subject == "FYP 2":
-                            f1 = cur_f1
-                            f2 = grand_total_score
-                            li = cur_li
-                        elif target_subject == "LI":
-                            f1 = cur_f1
-                            f2 = cur_f2
-                            li = grand_total_score
-                            
-                        # Call DB
-                        success, msg = db.update_student_marks(
-                            sel_matrix, 
-                            f1 if pd.notna(f1) else 0.0, 
-                            f2 if pd.notna(f2) else 0.0, 
-                            li if pd.notna(li) else 0.0,
-                            changed_by=st.session_state.get("staff_name", "Staff")
-                        )
-                        
-                        if success:
-                            st.success(f"✅ Grade saved: {grand_total_score}")
-                            st.rerun()
-                        else:
-                            st.error(f"❌ Error: {msg}")
 
 def show_admin_login():
     st.header("🔐 Admin Login")
