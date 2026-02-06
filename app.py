@@ -436,69 +436,76 @@ def show_staff_marking_portal():
             
         # 2. Display Rubric Form
         if target_subject in rc.RUBRIC_TEMPLATES:
-            template = rc.RUBRIC_TEMPLATES[target_subject]
-            items = template["items"]
+            subject_data = rc.RUBRIC_TEMPLATES[target_subject]
             
-            st.markdown(f"**Grading: {sel_row['Student_Name']} - {target_subject}**")
+            # Normalize structure: If it has 'forms', use that. If just 'items' (legacy), wrap it.
+            if "forms" in subject_data:
+                forms_list = subject_data["forms"]
+            else:
+                forms_list = [{"name": "General Evaluation", "items": subject_data.get("items", [])}]
             
-            # Using a Form to prevent constantly rerun
-            with st.form(key=f"rubric_form_{sel_matrix}"):
+            st.markdown(f"### 📑 Grading: {sel_row['Student_Name']} - {target_subject}")
+            
+            # Master Form for all sub-forms
+            with st.form(key=f"rubric_master_{sel_matrix}"):
+                grand_total_score = 0
+                grand_total_max = 0
                 scores = {}
-                total_score = 0
-                max_total = 0
                 
-                # Fetch current total mark to possibly pre-fill?
-                # It's hard to pre-fill detailed items if we didn't save them.
-                # So we start fresh or 0.
-                
-                cols = st.columns(2)
-                for idx, item in enumerate(items):
-                    # Distribute across columns
-                    c = cols[idx % 2]
-                    with c:
-                        # Display Label & Description
-                        st.markdown(f"**{item['label']}**")
-                        if item.get("desc"):
-                            st.caption(item["desc"])
+                # Loop through each "Form" (Section)
+                for form_idx, form in enumerate(forms_list):
+                    st.markdown(f"#### {form['name']}")
+                    st.info(f"Please rate the following items for {form['name']}")
+                    
+                    items = form["items"]
+                    # Use a container or columns for items
+                    cols = st.columns(2)
+                    
+                    for idx, item in enumerate(items):
+                         # Distribute across columns
+                        c = cols[idx % 2]
+                        with c:
+                            # Display Label & Description
+                            st.markdown(f"**{item['label']}**")
+                            if item.get("desc"):
+                                st.caption(item["desc"])
 
-                        # Fixed Scale 0-5 as requested
-                        scale_max = 5
-                        options = list(range(scale_max + 1))
-                        
-                        rating = st.radio(
-                            f"Rate {item['label']}",
-                            options=options,
-                            horizontal=True,
-                            label_visibility="collapsed",
-                            key=f"rub_{sel_matrix}_{idx}"
-                        )
-                        
-                        # Calculate weighted marks
-                        # Rating 5 = 100% of Max Marks
-                        cur_score = (rating / scale_max) * float(item['max'])
-                        st.caption(f"Calculated Score: **{cur_score:.2f}** / {item['max']}")
-                        
-                        scores[item['label']] = cur_score
-                        total_score += cur_score
-                        max_total += item['max']
-                        
-                st.markdown("---")
+                            # Fixed Scale 0-5
+                            scale_max = 5
+                            options = list(range(scale_max + 1))
+                            
+                            # Unique key needs form index too
+                            rating = st.radio(
+                                f"Rate {item['label']}",
+                                options=options,
+                                horizontal=True,
+                                label_visibility="collapsed",
+                                key=f"rub_{sel_matrix}_{form_idx}_{idx}"
+                            )
+                            
+                            # Calculate weighted marks
+                            cur_score = (rating / scale_max) * float(item['max'])
+                            st.caption(f"Score: **{cur_score:.1f}** / {item['max']}")
+                            
+                            scores[f"{form['name']} - {item['label']}"] = cur_score
+                            grand_total_score += cur_score
+                            grand_total_max += item['max']
+                    
+                    st.divider()
+
+                # Footer Actions
                 c_res1, c_res2 = st.columns([1, 1])
                 with c_res1:
-                    st.metric("Total Score", f"{total_score} / {max_total}")
+                    st.markdown(f"### Grand Total: {grand_total_score:.2f} / {grand_total_max}")
                     
                 with c_res2:
-                    st.write("Confirming will update the student's mark in the database.")
-                    submitted = st.form_submit_button("💾 Save Grade", type="primary")
+                    st.write("Confirming will update the student's final mark in the database.")
+                    submitted = st.form_submit_button("💾 Save All Grades", type="primary")
                     
                     if submitted:
-                        # Save Logic
+                        # Save Logic uses grand_total_score as the final subject mark
                         # We map subject to DB column
                         f1, f2, li = None, None, None
-                        
-                        # Preserve existing marks! (We don't want to overwrite other subjects with None)
-                        # db.update_student_marks usually expects all 3.
-                        # We use the row data we just fetched.
                         
                         cur_f1 = sel_row['FYP 1 Marks']
                         cur_f2 = sel_row['FYP 2 Marks']
@@ -506,17 +513,17 @@ def show_staff_marking_portal():
                         
                         # Update the specific one
                         if target_subject == "FYP 1":
-                            f1 = total_score
+                            f1 = grand_total_score
                             f2 = cur_f2
                             li = cur_li
                         elif target_subject == "FYP 2":
                             f1 = cur_f1
-                            f2 = total_score
+                            f2 = grand_total_score
                             li = cur_li
                         elif target_subject == "LI":
                             f1 = cur_f1
                             f2 = cur_f2
-                            li = total_score
+                            li = grand_total_score
                             
                         # Call DB
                         success, msg = db.update_student_marks(
@@ -528,7 +535,7 @@ def show_staff_marking_portal():
                         )
                         
                         if success:
-                            st.success(f"✅ Grade saved: {total_score}")
+                            st.success(f"✅ Grade saved: {grand_total_score}")
                             st.rerun()
                         else:
                             st.error(f"❌ Error: {msg}")
