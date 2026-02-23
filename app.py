@@ -1036,83 +1036,115 @@ def show_dashboard():
 
 def show_add_student():
     st.header("👨‍🎓 Add New Student")
-    companies = db.get_company_labels()
-    staff_options_map = db.get_staff_options()
-    staff_labels = ["Unassigned"] + list(staff_options_map.keys())
-
-    # Auto-Population Checkbox
-    sync_all = st.checkbox("🔗 Use same Supervisor, Panel, and Company for all subjects", value=True)
     
-    # We use a container instead of a form to allow real-time reactivity if needed, 
-    # but we'll stick to a submit button for the final write.
-    st.subheader("Basic Information")
-    c1, c2 = st.columns(2)
-    with c1:
-        name = st.text_input("Student Name")
-        matrix = st.text_input("Matrix Number")
-    with c2:
-        email = st.text_input("Email Address")
-        c2a, c2b = st.columns(2)
-        with c2a: program = st.text_input("Program (e.g. BEB)")
-        with c2b: cohort = st.text_input("Cohort (e.g. 2024/2025)")
+    t1, t2 = st.tabs(["Manual Registration", "Bulk Upload (Excel)"])
+    
+    with t1:
+        companies = db.get_company_labels()
+        staff_options_map = db.get_staff_options()
+        staff_labels = ["Unassigned"] + list(staff_options_map.keys())
 
-    # Section 1: FYP 1 (Source for Sync)
-    with st.expander("📘 FYP 1 Details", expanded=True):
-        f1_c1, f1_c2 = st.columns(2)
-        with f1_c1:
-            fyp1_comp = st.selectbox("Assign FYP Company", ["Unassigned"] + list(companies.keys()), key="f1_comp")
-            f1sv = st.selectbox("FYP 1 Supervisor", staff_labels, key="f1_sv")
-        with f1_c2:
-            st.write("")
-            st.write("")
-            f1p = st.selectbox("FYP 1 Panel", staff_labels, key="f1_p")
-            
-            fyp_title = st.text_area("FYP Project Title", height=68)
+        # Auto-Population Checkbox
+        sync_all = st.checkbox("🔗 Use same Supervisor, Panel, and Company for all subjects", value=True)
+        
+        st.subheader("Basic Information")
+        c1, c2 = st.columns(2)
+        with c1:
+            name = st.text_input("Student Name")
+            matrix = st.text_input("Matrix Number")
+        with c2:
+            email = st.text_input("Email Address")
+            c2a, c2b = st.columns(2)
+            with c2a: program = st.text_input("Program (e.g. BEB)")
+            with c2b: cohort = st.text_input("Cohort (e.g. 2024/2025)")
 
-    # Section 2 & 3: FYP 2 & LI (Dependent on Sync)
-    with st.expander("📗 FYP 2 Details", expanded=not sync_all):
-        f2_c1, f2_c2 = st.columns(2)
-        with f2_c1:
-            # If sync is on, we use FYP 1's values as defaults
-            f2sv_val = f1sv if sync_all else staff_labels[0]
-            f2sv = st.selectbox("FYP 2 Supervisor", staff_labels, index=staff_labels.index(f2sv_val), key="f2_sv")
-        with f2_c2:
-            f2p_val = f1p if sync_all else staff_labels[0]
-            f2p = st.selectbox("FYP 2 Panel", staff_labels, index=staff_labels.index(f2p_val), key="f2_p")
+        # Section 1: FYP 1 (Source for Sync)
+        with st.expander("📘 FYP 1 Details", expanded=True):
+            f1_c1, f1_c2 = st.columns(2)
+            with f1_c1:
+                fyp1_comp = st.selectbox("Assign FYP Company", ["Unassigned"] + list(companies.keys()), key="f1_comp")
+                f1sv = st.selectbox("FYP 1 Supervisor", staff_labels, key="f1_sv")
+            with f1_c2:
+                st.write("")
+                st.write("")
+                f1p = st.selectbox("FYP 1 Panel", staff_labels, key="f1_p")
+                
+                fyp_title = st.text_area("FYP Project Title", height=68)
 
-    with st.expander("🏢 Industrial Training (LI) Details", expanded=not sync_all):
-        li_c1, li_c2 = st.columns(2)
-        with li_c1:
-            li_comp_val = fyp1_comp if sync_all else "Unassigned"
-            li_comp = st.selectbox("Assign LI Company", ["Unassigned"] + list(companies.keys()), index=(["Unassigned"] + list(companies.keys())).index(li_comp_val), key="li_comp")
-            
-            li_i_sv = st.selectbox("Industry Supervisor", staff_labels, key="li_i_sv")
-        with li_c2:
-            li_u_sv_val = f1sv if sync_all else staff_labels[0]
-            li_u_sv = st.selectbox("University Supervisor", staff_labels, index=staff_labels.index(li_u_sv_val), key="li_u_sv")
+        # Section 2 & 3: FYP 2 & LI (Dependent on Sync)
+        with st.expander("📗 FYP 2 Details", expanded=not sync_all):
+            f2_c1, f2_c2 = st.columns(2)
+            with f2_c1:
+                # If sync is on, we use FYP 1's values as defaults
+                f2sv_val = f1sv if sync_all else staff_labels[0]
+                f2sv = st.selectbox("FYP 2 Supervisor", staff_labels, index=staff_labels.index(f2sv_val), key="f2_sv")
+            with f2_c2:
+                f2p_val = f1p if sync_all else staff_labels[0]
+                f2p = st.selectbox("FYP 2 Panel", staff_labels, index=staff_labels.index(f2p_val), key="f2_p")
 
-    if st.button("Submit Student Data", type="primary", use_container_width=True):
-        if name and matrix:
-            def get_id(mapping, label):
-                return mapping.get(label) if label not in ["Unassigned", "-"] else None
+        with st.expander("🏢 Industrial Training (LI) Details", expanded=not sync_all):
+            li_c1, li_c2 = st.columns(2)
+            with li_c1:
+                li_comp_val = fyp1_comp if sync_all else "Unassigned"
+                li_comp = st.selectbox("Assign LI Company", ["Unassigned"] + list(companies.keys()), index=(["Unassigned"] + list(companies.keys())).index(li_comp_val), key="li_comp")
+                
+                li_i_sv = st.selectbox("Industry Supervisor", staff_labels, key="li_i_sv")
+            with li_c2:
+                li_u_sv_val = f1sv if sync_all else staff_labels[0]
+                li_u_sv = st.selectbox("University Supervisor", staff_labels, index=staff_labels.index(li_u_sv_val), key="li_u_sv")
 
-            success, msg = db.add_student(
-                name=name, matrix=matrix, email=email, program=program, cohort=cohort,
-                fyp_cid=get_id(companies, fyp1_comp),
-                li_cid=get_id(companies, li_comp),
-                f1s_id=get_id(staff_options_map, f1sv),
-                f1p_id=get_id(staff_options_map, f1p),
-                f2s_id=get_id(staff_options_map, f2sv),
-                f2p_id=get_id(staff_options_map, f2p),
-                li_i_sv_id=get_id(staff_options_map, li_i_sv),
-                li_u_sv_id=get_id(staff_options_map, li_u_sv),
-                fyp_title=fyp_title
-            )
-            if success: 
-                st.success(f"✅ {msg}")
-                st.balloons()
-            else: st.error(msg)
-        else: st.warning("Name and Matrix Number are required.")
+        if st.button("Submit Student Data", type="primary", use_container_width=True):
+            if name and matrix:
+                def get_id(mapping, label):
+                    return mapping.get(label) if label not in ["Unassigned", "-"] else None
+
+                success, msg = db.add_student(
+                    name=name, matrix=matrix, email=email, program=program, cohort=cohort,
+                    fyp_cid=get_id(companies, fyp1_comp),
+                    li_cid=get_id(companies, li_comp),
+                    f1s_id=get_id(staff_options_map, f1sv),
+                    f1p_id=get_id(staff_options_map, f1p),
+                    f2s_id=get_id(staff_options_map, f2sv),
+                    f2p_id=get_id(staff_options_map, f2p),
+                    li_i_sv_id=get_id(staff_options_map, li_i_sv),
+                    li_u_sv_id=get_id(staff_options_map, li_u_sv),
+                    fyp_title=fyp_title
+                )
+                if success: 
+                    st.success(f"✅ {msg}")
+                    st.balloons()
+                else: st.error(msg)
+            else: st.warning("Name and Matrix Number are required.")
+
+    with t2:
+        st.subheader("Bulk Student Enrollment")
+        st.info("Upload an Excel file with specific columns to add multiple students at once.")
+        st.write("Required Columns: `Name`, `Matrix Number`, `Email`, `Program`, `Cohort`")
+        
+        up_file = st.file_uploader("Upload Excel Template", type=["xlsx"], key="bulk_stud_up")
+        if up_file:
+            try:
+                df_up = pd.read_excel(up_file)
+                st.write("### Data Preview")
+                st.dataframe(df_up.head(), use_container_width=True)
+                
+                if st.button("Confirm Bulk Upload", type="primary"):
+                    with st.spinner("Processing..."):
+                        count, errs = db.bulk_add_students(df_up)
+                        if count > 0:
+                            st.success(f"✅ Successfully added {count} students to the database!")
+                            st.balloons()
+                            import time
+                            time.sleep(1)
+                            st.rerun()
+                        elif not errs:
+                            st.error("❌ Failed: No valid student records found to add.")
+                            
+                        if errs:
+                            for e in errs:
+                                st.error(f"❌ Error: {e}")
+            except Exception as e:
+                st.error(f"Error reading file: {e}")
 
 def show_manage_staff():
     st.header("👨‍🏫 Manage Staff")

@@ -221,22 +221,90 @@ def get_students_for_marking(staff_db_id):
         st.error(f"Error fetching students for marking: {e}")
         return pd.DataFrame()
 
-def add_student(matrix, name, program, cohort, email=None, password=None):
-    """Add a new student."""
+def add_student(name, matrix, email, program, cohort, 
+                fyp_cid=None, li_cid=None, 
+                f1s_id=None, f1p_id=None, 
+                f2s_id=None, f2p_id=None, 
+                li_i_sv_id=None, li_u_sv_id=None, 
+                fyp_title=None, password=None):
+    """Adds a new student with all initial assignments."""
     try:
         data = {
-            "matrix_number": matrix,
             "name": name,
+            "matrix_number": matrix,
+            "email": email,
             "program": program,
             "cohort": cohort,
-            "email": email,
-            "password": password if password else matrix, # Default pwd = matrix
+            "fyp_company_id": fyp_cid,
+            "li_company_id": li_cid,
+            "fyp_sv_id": f1s_id,
+            "fyp1_panel_id": f1p_id,
+            "fyp2_panel_id": f2p_id,
+            "li_sv_id": li_u_sv_id,
+            # If industry SV is a staff member, store it, but usually its external string.
+            # Assuming DB column matches the key name if provided.
+            "fyp_title": fyp_title,
+            "password": password if password else matrix,
             "is_archived": 0
         }
         sb.table("students").insert(data).execute()
         return True, "Student added successfully."
     except Exception as e:
         return False, str(e)
+
+def bulk_add_students(df):
+    """
+    Adds students in bulk from a DataFrame.
+    Expected Columns: Name, Matrix Number, Email, Program, Cohort
+    """
+    count = 0
+    errors = []
+    try:
+        col_names = list(df.columns)
+        
+        # Check for matching column names flexibly
+        name_col = next((c for c in col_names if c.strip().lower() in ['name', 'student_name', 'student name']), None)
+        matrix_col = next((c for c in col_names if c.strip().lower() in ['matrix number', 'matrix_no', 'matrix no']), None)
+        email_col = next((c for c in col_names if c.strip().lower() in ['email']), None)
+        prog_col = next((c for c in col_names if c.strip().lower() in ['program', 'programme']), None)
+        cohort_col = next((c for c in col_names if c.strip().lower() in ['cohort']), None)
+
+        if not name_col or not matrix_col:
+            return 0, ["Required columns ('Name' and 'Matrix Number') not found in uploaded file. Found columns: " + ", ".join(col_names)]
+
+        records = []
+        for _, row in df.iterrows():
+            # Basic validation
+            name = str(row.get(name_col, '')).strip()
+            matrix = str(row.get(matrix_col, '')).strip()
+            
+            # Skip empty or completely 'nan' rows from Excel
+            if not name or not matrix or name.lower() == 'nan' or matrix.lower() == 'nan':
+                continue
+                
+            email_val = str(row.get(email_col, '')).strip() if email_col else ""
+            prog_val = str(row.get(prog_col, '')).strip() if prog_col else ""
+            cohort_val = str(row.get(cohort_col, '')).strip() if cohort_col else ""
+
+            rec = {
+                "name": name,
+                "matrix_number": matrix,
+                "email": email_val if email_val.lower() != 'nan' else "",
+                "program": prog_val if prog_val.lower() != 'nan' else "",
+                "cohort": cohort_val if cohort_val.lower() != 'nan' else "",
+                "password": matrix, # Default
+                "is_archived": 0
+            }
+            records.append(rec)
+            
+        if not records:
+            return 0, ["No valid student entries found in the file."]
+            
+        sb.table("students").insert(records).execute()
+        count = len(records)
+        return count, errors
+    except Exception as e:
+        return 0, [str(e)]
 
 def verify_student_login(matrix, password):
     """
