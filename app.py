@@ -696,15 +696,7 @@ def show_dashboard():
                 cols = st.columns(len(row))
                 for i, col_name in enumerate(row):
                     # Default visibility for common columns
-                    is_default = col_name in ["Sync", "No.", "Status", "Student Name", "Matrix Number", "Program", "Cohort"]
-                    
-                    # Default visibility for subject-specific columns
-                    if subject_type == "FYP_1":
-                        if col_name in ["Company", "State Profile", "Uni SV", "Panelist", "Marks"]: is_default = True
-                    elif subject_type == "FYP_2":
-                        if col_name in ["Company", "State Profile", "Uni SV", "Panelist", "Marks"]: is_default = True
-                    elif subject_type == "LI":
-                        if col_name in ["Company", "State Profile", "Uni SV", "Industry SV", "Marks"]: is_default = True
+                    is_default = col_name in ["No.", "Student Name", "Matrix Number", "Company"]
 
                     # Unique key per tab
                     if cols[i].checkbox(col_name, value=is_default, key=f"chk_{subject_type}_{col_name}"):
