@@ -800,51 +800,51 @@ def show_dashboard():
             # 3. Charts - Grade Distribution Only
             import altair as alt
             
-            st.subheader("📈 Grade Distribution")
-            # Define bins
-            def get_grade_bin(m):
-                if m >= 80: return "A"
-                elif m >= 75: return "A-"
-                elif m >= 70: return "B+"
-                elif m >= 65: return "B"
-                elif m >= 60: return "B-"
-                elif m >= 55: return "C+"
-                elif m >= 50: return "C"
-                elif m >= 47: return "C-"
-                elif m >= 44: return "D+"
-                elif m >= 40: return "D"
-                else: return "E"
-
-            all_grades = ["A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D+", "D", "E"]
-
-            if not graded_df.empty:
-                grade_counts = graded_df[mark_col].apply(get_grade_bin).value_counts()
-            else:
-                grade_counts = pd.Series(dtype=int)
-            
-            # Reindex to include missing grades as 0
-            grade_counts = grade_counts.reindex(all_grades, fill_value=0).reset_index()
-            grade_counts.columns = ["Grade Range", "Count"]
-
-            # Fixed Y-Scale based on total students
-            y_max = total_students if total_students > 0 else 5
-            if y_max < 5: y_max = 5 # Ensure at least some height
-
-            base_g = alt.Chart(grade_counts).encode(
-                x=alt.X('Grade Range', sort=all_grades, axis=alt.Axis(labelAngle=0)),
-                y=alt.Y('Count', 
-                        title='Students', 
-                        axis=alt.Axis(tickMinStep=1, format='d'),
-                        scale=alt.Scale(domain=[0, y_max])
-                       ), 
-                tooltip=['Grade Range', 'Count']
-            )
-            bars_g = base_g.mark_bar(color='teal')
-            text_g = base_g.mark_text(align='center', dy=-5, fontSize=14).encode(
-                text=alt.Text('Count', format='.0f')
-            )
-            
-            st.altair_chart((bars_g + text_g), use_container_width=True)
+            with st.expander("📈 Grade Distribution", expanded=False):
+                # Define bins
+                def get_grade_bin(m):
+                    if m >= 80: return "A"
+                    elif m >= 75: return "A-"
+                    elif m >= 70: return "B+"
+                    elif m >= 65: return "B"
+                    elif m >= 60: return "B-"
+                    elif m >= 55: return "C+"
+                    elif m >= 50: return "C"
+                    elif m >= 47: return "C-"
+                    elif m >= 44: return "D+"
+                    elif m >= 40: return "D"
+                    else: return "E"
+    
+                all_grades = ["A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D+", "D", "E"]
+    
+                if not graded_df.empty:
+                    grade_counts = graded_df[mark_col].apply(get_grade_bin).value_counts()
+                else:
+                    grade_counts = pd.Series(dtype=int)
+                
+                # Reindex to include missing grades as 0
+                grade_counts = grade_counts.reindex(all_grades, fill_value=0).reset_index()
+                grade_counts.columns = ["Grade Range", "Count"]
+    
+                # Fixed Y-Scale based on total students
+                y_max = total_students if total_students > 0 else 5
+                if y_max < 5: y_max = 5 # Ensure at least some height
+    
+                base_g = alt.Chart(grade_counts).encode(
+                    x=alt.X('Grade Range', sort=all_grades, axis=alt.Axis(labelAngle=0)),
+                    y=alt.Y('Count', 
+                            title='Students', 
+                            axis=alt.Axis(tickMinStep=1, format='d'),
+                            scale=alt.Scale(domain=[0, y_max])
+                           ), 
+                    tooltip=['Grade Range', 'Count']
+                )
+                bars_g = base_g.mark_bar(color='teal')
+                text_g = base_g.mark_text(align='center', dy=-5, fontSize=14).encode(
+                    text=alt.Text('Count', format='.0f')
+                )
+                
+                st.altair_chart((bars_g + text_g), use_container_width=True)
             st.divider()
 
     def render_editor(df_view, subject_cols, spec_id):
