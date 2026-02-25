@@ -25,7 +25,7 @@ def get_students(include_archived=False):
 
     try:
         # Fetch ALL data first to handle None/Null values safely in Python
-        query = sb.table("students").select("*")
+        query = sb.table("students").select("*").order("matrix_number")
         # Removed .eq("is_archived", 0) from here to handle it in Pandas
         
         response = query.execute()
@@ -388,7 +388,11 @@ def update_student_company(matrix, company_id, type_="fyp", changed_by="System")
         else:
             val = None
         
-        sb.table("students").update({col_name: val}).eq("matrix_number", matrix).execute()
+        res = sb.table("students").update({col_name: val}).eq("matrix_number", matrix).execute()
+        
+        # Detect silent RLS failure (0 rows actually updated)
+        if hasattr(res, 'data') and len(res.data) == 0:
+            return False, "Database blocked the update! (Row-Level Security policy error). Check your Supabase key."
         
         # Log it
         log_audit(matrix, f"{type_.upper()} Company", "Old", str(val), changed_by)
@@ -436,8 +440,12 @@ def update_student_field(matrix, field, value, changed_by="Admin"):
         else:
             val = value
             
-        sb.table("students").update({db_col: val}).eq("matrix_number", matrix).execute()
+        res = sb.table("students").update({db_col: val}).eq("matrix_number", matrix).execute()
         
+        # Detect silent RLS failure
+        if hasattr(res, 'data') and len(res.data) == 0:
+            return False, "Database blocked the update! (Row-Level Security policy error)."
+            
         log_audit(matrix, field, "Old", str(val), changed_by)
         return True, "Updated"
     except Exception as e:
@@ -577,7 +585,7 @@ def verify_staff_login(staff_id_num, password):
 
 def get_companies():
     try:
-        response = sb.table("companies").select("*").execute()
+        response = sb.table("companies").select("*").order("id").execute()
         df = pd.DataFrame(response.data) if response.data else pd.DataFrame()
         # Rename for App compatibility if needed
         # app uses 'Company Name'? Let's check. 
