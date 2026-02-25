@@ -915,6 +915,11 @@ def show_dashboard():
                                 if success: success_count += 1
                     if success_count > 0:
                         st.toast(f"✅ Updated {success_count} fields successfully!", icon="💾")
+                        
+                        # Fix: Clear the editing session state so it doesn't revert or hold stale data
+                        if f"editor_{spec_id}" in st.session_state:
+                            del st.session_state[f"editor_{spec_id}"]
+                        
                         import time
                         time.sleep(1.0) # Short pause to let user see toast before refresh
                         st.rerun()
