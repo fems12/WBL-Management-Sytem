@@ -585,7 +585,7 @@ def verify_staff_login(staff_id_num, password):
 
 def get_companies():
     try:
-        response = sb.table("companies").select("*").order("id").execute()
+        response = sb.table("companies").select("*").order("company_id").execute()
         df = pd.DataFrame(response.data) if response.data else pd.DataFrame()
         # Rename for App compatibility if needed
         # app uses 'Company Name'? Let's check. 
