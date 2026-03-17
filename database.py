@@ -48,12 +48,14 @@ def get_students(include_archived=False):
         # Prepare Lookups (Normalized to STRINGS for safety)
         comp_map = {} # ID (str) -> Name
         comp_states = {} # ID (str) -> State
+        comp_addresses = {} # ID (str) -> Address
         staff_map = {} # ID (str) -> Name
         
         if not companies_df.empty:
             cid_col = "id" if "id" in companies_df.columns else "company_id"
             cname_col = "Company Name" if "Company Name" in companies_df.columns else "name"
             cstate_col = "State" if "State" in companies_df.columns else "state"
+            caddress_col = "Address" if "Address" in companies_df.columns else "address"
             
             if cid_col in companies_df.columns:
                 if cname_col in companies_df.columns:
@@ -61,6 +63,8 @@ def get_students(include_archived=False):
                     comp_map = {str(k): v for k, v in zip(companies_df[cid_col], companies_df[cname_col])}
                 if cstate_col in companies_df.columns:
                     comp_states = {str(k): v for k, v in zip(companies_df[cid_col], companies_df[cstate_col])}
+                if caddress_col in companies_df.columns:
+                    comp_addresses = {str(k): v for k, v in zip(companies_df[cid_col], companies_df[caddress_col])}
 
         if not staff_df.empty:
             sid_col = "staff_id" if "staff_id" in staff_df.columns else "id"
@@ -88,6 +92,10 @@ def get_students(include_archived=False):
         df["FYP_State"] = df[fyp_source].apply(lambda x: safe_map(x, comp_states)) if fyp_source in df.columns else "-"
         df["LI_State"] = df["li_company_id"].apply(lambda x: safe_map(x, comp_states)) if "li_company_id" in df.columns else "-"
 
+        # Map Company Addresses
+        df["FYP_Address"] = df[fyp_source].apply(lambda x: safe_map(x, comp_addresses)) if fyp_source in df.columns else "-"
+        df["LI_Address"] = df["li_company_id"].apply(lambda x: safe_map(x, comp_addresses)) if "li_company_id" in df.columns else "-"
+
         # Map Supervisors
         df["FYP_SV_Name"] = df["fyp_sv_id"].apply(lambda x: safe_map(x, staff_map)) if "fyp_sv_id" in df.columns else "-"
         df["LI_SV_Name"] = df["li_sv_id"].apply(lambda x: safe_map(x, staff_map)) if "li_sv_id" in df.columns else "-"
@@ -113,8 +121,6 @@ def get_students(include_archived=False):
         df["FYP Title"] = df["FYP_Title"] if "FYP_Title" in df.columns else "-"
         
         # Address Stubs
-        df["FYP_Address"] = "-" 
-        df["LI_Address"] = "-"
         df["LI Industry SV"] = "-" 
 
 
