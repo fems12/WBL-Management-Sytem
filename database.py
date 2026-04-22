@@ -432,9 +432,9 @@ def update_student_field(matrix, field, value, changed_by="Admin"):
         db_col = col_map.get(field, field.lower().replace(" ", "_")) # Fallback
         
         # 2. Handle Data Types
-        # Marks should be float
+        # Marks should be an integer for the DB schema
         if "marks" in db_col:
-            val = float(value) if value and value != "-" else None
+            val = int(round(float(value))) if value is not None and value != "-" and str(value).strip() != "" else None
         # IDs should be Int
         elif "_id" in db_col:
              if value is None or value == "-":
@@ -462,10 +462,13 @@ def update_student_marks(matrix, fyp1, fyp2, li, changed_by="Staff"):
     Updates all 3 mark fields at once.
     """
     try:
+        def _parse_mark(m):
+            return int(round(float(m))) if m is not None and m != "-" and str(m).strip() != "" else None
+
         data = {
-            "fyp1_marks": float(fyp1) if fyp1 is not None else None,
-            "fyp2_marks": float(fyp2) if fyp2 is not None else None,
-            "li_marks": float(li) if li is not None else None
+            "fyp1_marks": _parse_mark(fyp1),
+            "fyp2_marks": _parse_mark(fyp2),
+            "li_marks": _parse_mark(li)
         }
         sb.table("students").update(data).eq("matrix_number", matrix).execute()
         
