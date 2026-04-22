@@ -434,7 +434,7 @@ def update_student_field(matrix, field, value, changed_by="Admin"):
         # 2. Handle Data Types
         # Marks should be an integer for the DB schema
         if "marks" in db_col:
-            val = int(round(float(value))) if value is not None and value != "-" and str(value).strip() != "" else None
+            val = round(float(value), 2) if value is not None and value != "-" and str(value).strip() != "" else None
         # IDs should be Int
         elif "_id" in db_col:
              if value is None or value == "-":
@@ -463,7 +463,7 @@ def update_student_marks(matrix, fyp1, fyp2, li, changed_by="Staff"):
     """
     try:
         def _parse_mark(m):
-            return int(round(float(m))) if m is not None and m != "-" and str(m).strip() != "" else None
+            return round(float(m), 2) if m is not None and m != "-" and str(m).strip() != "" else None
 
         data = {
             "fyp1_marks": _parse_mark(fyp1),
